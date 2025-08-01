@@ -80,14 +80,14 @@ def muzero_policy(
   rng_key, dirichlet_rng_key, search_rng_key = jax.random.split(rng_key, 3)
 
   # Adding Dirichlet noise.
-  noisy_logits = _get_logits_from_probs(
-      _add_dirichlet_noise(
-          dirichlet_rng_key,
-          jax.nn.softmax(root.prior_logits),
-          dirichlet_fraction=dirichlet_fraction,
-          dirichlet_alpha=dirichlet_alpha))
+  # noisy_logits = _get_logits_from_probs(
+  #     _add_dirichlet_noise(
+  #         dirichlet_rng_key,
+  #         jax.nn.softmax(root.prior_logits),
+  #         dirichlet_fraction=dirichlet_fraction,
+  #         dirichlet_alpha=dirichlet_alpha))
   root = root.replace(
-      prior_logits=_mask_invalid_actions(noisy_logits, invalid_actions))
+      prior_logits=_mask_invalid_actions(root.prior_logits, invalid_actions))
 
   # Running the search.
   interior_action_selection_fn = functools.partial(
