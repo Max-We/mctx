@@ -36,7 +36,9 @@ class Tree(Generic[T]):
 
   node_visits: `[B, N]` the visit counts for each node.
   raw_values: `[B, N]` the raw value for each node.
+  raw_variances: `[B, N]` the raw variance estimates for each node.
   node_values: `[B, N]` the cumulative search value for each node.
+  node_variances: `[B, N]` the variance estimates for each node.
   parents: `[B, N]` the node index for the parents for each node.
   action_from_parent: `[B, N]` action to take from the parent to reach each
     node.
@@ -51,6 +53,8 @@ class Tree(Generic[T]):
     `children_rewards` and the `children_values`.
   children_values: `[B, N, num_actions]` the value of the next node after the
     action.
+  children_variances: `[B, N, num_actions]` the variance estimates for children
+    for each action.
   embeddings: `[B, N, ...]` the state embeddings of each node.
   root_invalid_actions: `[B, num_actions]` a mask with invalid actions at the
     root. In the mask, invalid actions have ones, and valid actions have zeros.
@@ -58,7 +62,9 @@ class Tree(Generic[T]):
   """
   node_visits: chex.Array  # [B, N]
   raw_values: chex.Array  # [B, N]
+  raw_variances: chex.Array  # [B, N]
   node_values: chex.Array  # [B, N]
+  node_variances: chex.Array  # [B, N]
   parents: chex.Array  # [B, N]
   action_from_parent: chex.Array  # [B, N]
   children_index: chex.Array  # [B, N, num_actions]
@@ -67,6 +73,7 @@ class Tree(Generic[T]):
   children_rewards: chex.Array  # [B, N, num_actions]
   children_discounts: chex.Array  # [B, N, num_actions]
   children_values: chex.Array  # [B, N, num_actions]
+  children_variances: chex.Array  # [B, N, num_actions]
   embeddings: Any  # [B, N, ...]
   root_invalid_actions: chex.Array  # [B, num_actions]
   extra_data: T  # [B, ...]
@@ -99,6 +106,7 @@ class Tree(Generic[T]):
     # Get state and action values for the root nodes.
     chex.assert_rank(self.node_values, 2)
     value = self.node_values[:, Tree.ROOT_INDEX]
+    variance = self.node_variances[:, Tree.ROOT_INDEX]
     batch_size, = value.shape
     root_indices = jnp.full((batch_size,), Tree.ROOT_INDEX)
     qvalues = self.qvalues(root_indices)
@@ -112,7 +120,9 @@ class Tree(Generic[T]):
         visit_counts=visit_counts,
         visit_probs=visit_probs,
         value=value,
-        qvalues=qvalues)
+        qvalues=qvalues,
+        variance=variance,
+    )
 
 
 def infer_batch_size(tree: Tree) -> int:
@@ -132,6 +142,7 @@ class SearchSummary:
   visit_probs: chex.Array
   value: chex.Array
   qvalues: chex.Array
+  variance: chex.Array
 
 
 def _unbatched_qvalues(tree: Tree, index: int) -> int:

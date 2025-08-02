@@ -44,6 +44,7 @@ class RecurrentFnOutput:
   discount: chex.Array
   prior_logits: chex.Array
   value: chex.Array
+  variance: chex.Array
 
 
 Action = chex.Array
@@ -63,6 +64,7 @@ class RootFnOutput:
   """
   prior_logits: chex.Array
   value: chex.Array
+  variance: chex.Array
   embedding: RecurrentState
 
 
@@ -112,9 +114,11 @@ class DecisionRecurrentFnOutput:
   Attributes:
     chance_logits: `[B, C]` logits of `C` chance outcomes at the afterstate.
     afterstate_value: `[B]` values of the afterstates `v(sa)`.
+    variance: `[B]` variance estimates of the afterstates.
   """
   chance_logits: chex.Array  # [B, C]
   afterstate_value: chex.Array  # [B]
+  variance: chex.Array  # [B]
 
 
 @chex.dataclass(frozen=True)
@@ -131,11 +135,13 @@ class ChanceRecurrentFnOutput:
     value: `[B]` values of the states `v(s)`.
     reward: `[B]` rewards at the states.
     discount: `[B]` discounts at the states.
+    variance: `[B]` variance estimates of the states.
   """
   action_logits: chex.Array  # [B, A]
   value: chex.Array  # [B]
   reward: chex.Array  # [B]
   discount: chex.Array  # [B]
+  variance: chex.Array  # [B]
 
 
 @chex.dataclass(frozen=True)

@@ -227,9 +227,9 @@ def expand(
   chex.assert_shape(step.prior_logits, [batch_size, tree.num_actions])
   chex.assert_shape(step.reward, [batch_size])
   chex.assert_shape(step.discount, [batch_size])
-  chex.assert_shape(step.value, [batch_size])
+  chex.assert_shape([step.value, step.variance], [batch_size])
   tree = update_tree_node(
-      tree, next_node_index, step.prior_logits, step.value, embedding)
+      tree, next_node_index, step.prior_logits, step.value, step.variance, embedding)
 
   # Return updated tree topology.
   return tree.replace(
@@ -242,7 +242,6 @@ def expand(
       parents=batch_update(tree.parents, parent_index, next_node_index),
       action_from_parent=batch_update(
           tree.action_from_parent, action, next_node_index))
-
 
 @jax.vmap
 def backward(
@@ -258,36 +257,65 @@ def backward(
     Updated MCTS tree state.
   """
 
+  def welfords_parallel_update(val_parent, var_parent, n_parent, val_leaf, var_leaf, n_leaf=1):
+      # convert n to float for numerical stability
+      n_parent = jnp.asarray(n_parent, dtype=jnp.float32)
+      n_leaf = jnp.asarray(n_leaf, dtype=jnp.float32)
+
+      # Welford algorithm for calculating mean & variance (for the parent)
+      n_new = n_leaf + n_parent
+
+      # 1. mean update & delta calculation
+      delta = val_leaf - val_parent
+      val_new = val_parent + delta * (n_leaf / n_new)
+
+      # 2. variance update
+      m2_parent = var_parent * n_parent
+      m2_leaf = var_leaf * n_leaf
+      m2_new = m2_leaf + m2_parent + (delta ** 2) * ((n_leaf * n_parent) / n_new)
+      var_new = m2_new / n_new
+
+      return val_new, var_new
+
   def cond_fun(loop_state):
-    _, _, index = loop_state
+    _, _, _, index = loop_state
     return index != Tree.ROOT_INDEX
 
   def body_fun(loop_state):
     # Here we update the value of our parent, so we start by reversing.
-    tree, leaf_value, index = loop_state
+    tree, leaf_value, leaf_variance, index = loop_state
     parent = tree.parents[index]
     count = tree.node_visits[parent]
     action = tree.action_from_parent[index]
     reward = tree.children_rewards[parent, action]
+    # leaf
     leaf_value = reward + tree.children_discounts[parent, action] * leaf_value
-    parent_value = (
-        tree.node_values[parent] * count + leaf_value) / (count + 1.0)
+    leaf_variance = jnp.square(tree.children_discounts[parent, action]) * leaf_variance
+    # parent
+    parent_value, parent_variance = welfords_parallel_update(
+        val_parent=tree.node_values[parent], var_parent=tree.node_variances[parent], n_parent=count,
+        val_leaf=leaf_value, var_leaf=leaf_variance)
+    # children
     children_values = tree.node_values[index]
+    children_variances = tree.node_variances[index]
     children_counts = tree.children_visits[parent, action] + 1
 
     tree = tree.replace(
         node_values=update(tree.node_values, parent_value, parent),
+        node_variances=update(tree.node_variances, parent_variance, parent),
         node_visits=update(tree.node_visits, count + 1, parent),
         children_values=update(
             tree.children_values, children_values, parent, action),
+        children_variances=update(
+            tree.children_variances, children_variances, parent, action),
         children_visits=update(
             tree.children_visits, children_counts, parent, action))
 
-    return tree, leaf_value, parent
+    return tree, leaf_value, leaf_variance, parent
 
   leaf_index = jnp.asarray(leaf_index, dtype=jnp.int32)
-  loop_state = (tree, tree.node_values[leaf_index], leaf_index)
-  tree, _, _ = jax.lax.while_loop(cond_fun, body_fun, loop_state)
+  loop_state = (tree, tree.node_values[leaf_index], tree.node_variances[leaf_index], leaf_index)
+  tree, _, _, _ = jax.lax.while_loop(cond_fun, body_fun, loop_state)
 
   return tree
 
@@ -306,6 +334,7 @@ def update_tree_node(
     node_index: chex.Array,
     prior_logits: chex.Array,
     value: chex.Array,
+    variance: chex.Array,
     embedding: chex.Array) -> Tree[T]:
   """Updates the tree at node index.
 
@@ -315,6 +344,7 @@ def update_tree_node(
     prior_logits: the prior logits to fill in for the new node, of shape
       `[B, num_actions]`.
     value: the value to fill in for the new node. Shape `[B]`.
+    variance: the variance to fill in for the new node. Shape `[B]`.
     embedding: the state embeddings for the node. Shape `[B, ...]`.
 
   Returns:
@@ -333,6 +363,10 @@ def update_tree_node(
           tree.raw_values, value, node_index),
       node_values=batch_update(
           tree.node_values, value, node_index),
+      raw_variances=batch_update(
+          tree.raw_variances, variance, node_index),
+      node_variances=batch_update(
+          tree.node_variances, variance, node_index),
       node_visits=batch_update(
           tree.node_visits, new_visit, node_index),
       embeddings=jax.tree.map(
@@ -350,7 +384,7 @@ def instantiate_tree_from_root(
   """Initializes tree state at search root."""
   chex.assert_rank(root.prior_logits, 2)
   batch_size, num_actions = root.prior_logits.shape
-  chex.assert_shape(root.value, [batch_size])
+  chex.assert_shape([root.value, root.variance], [batch_size])
   num_nodes = num_simulations + 1
   data_dtype = root.value.dtype
   batch_node = (batch_size, num_nodes)
@@ -363,7 +397,9 @@ def instantiate_tree_from_root(
   tree = Tree(
       node_visits=jnp.zeros(batch_node, dtype=jnp.int32),
       raw_values=jnp.zeros(batch_node, dtype=data_dtype),
+      raw_variances=jnp.zeros(batch_node, dtype=data_dtype),
       node_values=jnp.zeros(batch_node, dtype=data_dtype),
+      node_variances=jnp.zeros(batch_node, dtype=data_dtype),
       parents=jnp.full(batch_node, Tree.NO_PARENT, dtype=jnp.int32),
       action_from_parent=jnp.full(
           batch_node, Tree.NO_PARENT, dtype=jnp.int32),
@@ -372,6 +408,7 @@ def instantiate_tree_from_root(
       children_prior_logits=jnp.zeros(
           batch_node_action, dtype=root.prior_logits.dtype),
       children_values=jnp.zeros(batch_node_action, dtype=data_dtype),
+      children_variances=jnp.zeros(batch_node_action, dtype=data_dtype),
       children_visits=jnp.zeros(batch_node_action, dtype=jnp.int32),
       children_rewards=jnp.zeros(batch_node_action, dtype=data_dtype),
       children_discounts=jnp.zeros(batch_node_action, dtype=data_dtype),
@@ -381,5 +418,5 @@ def instantiate_tree_from_root(
 
   root_index = jnp.full([batch_size], Tree.ROOT_INDEX)
   tree = update_tree_node(
-      tree, root_index, root.prior_logits, root.value, root.embedding)
+      tree, root_index, root.prior_logits, root.value, root.variance, root.embedding)
   return tree
