@@ -35,6 +35,7 @@ from mctx._src.policies import stochastic_muzero_policy
 from mctx._src.qtransforms import qtransform_by_min_max
 from mctx._src.qtransforms import qtransform_by_parent_and_siblings
 from mctx._src.qtransforms import qtransform_completed_by_mix_value
+from mctx._src.qtransforms import q_var_transform_by_parent_and_siblings
 from mctx._src.search import search
 from mctx._src.tree import Tree
 
@@ -62,6 +63,7 @@ __all__ = (
     "qtransform_by_min_max",
     "qtransform_by_parent_and_siblings",
     "qtransform_completed_by_mix_value",
+    "q_var_transform_by_parent_and_siblings",
     "search",
     "stochastic_muzero_policy",
 )
