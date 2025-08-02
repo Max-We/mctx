@@ -101,6 +101,15 @@ class Tree(Generic[T]):
       return _unbatched_qvalues(self, indices)
     # pytype: enable=wrong-arg-types
 
+  def variances(self, indices):
+    """Compute variances for any node indices in the tree."""
+    # pytype: disable=wrong-arg-types  # jnp-type
+    if jnp.asarray(indices).shape:
+      return jax.vmap(_unbatched_variances)(self, indices)
+    else:
+      return _unbatched_variances
+    # pytype: enable=wrong-arg-types
+
   def summary(self) -> SearchSummary:
     """Extract summary statistics for the root node."""
     # Get state and action values for the root nodes.
@@ -151,3 +160,7 @@ def _unbatched_qvalues(tree: Tree, index: int) -> int:
       tree.children_rewards[index]
       + tree.children_discounts[index] * tree.children_values[index]
   )
+
+def _unbatched_variances(tree: Tree, index: int) -> int:
+  chex.assert_rank(tree.children_discounts, 2)
+  return jnp.square(tree.children_discounts) * tree.children_variances[index]

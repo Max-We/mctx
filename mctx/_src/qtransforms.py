@@ -84,6 +84,48 @@ def qtransform_by_parent_and_siblings(
   return normalized
 
 
+def q_var_transform_by_parent_and_siblings(
+    tree: tree_lib.Tree,
+    node_index: chex.Numeric,
+    *,
+    epsilon: chex.Numeric = 1e-8,
+) -> tuple[chex.Array, chex.Array]:
+  """Returns qvalues and variances normalized by min, max over V(node) and qvalues.
+
+  Args:
+    tree: _unbatched_ MCTS tree state.
+    node_index: scalar index of the parent node.
+    epsilon: the minimum denominator for the normalization.
+
+  Returns:
+    Tuple of (normalized_qvalues, normalized_variances). Both are normalized
+    to be from the [0, 1] interval. The unvisited actions will have zero
+    Q-value and variance. Both have shape `[num_actions]`.
+  """
+  chex.assert_shape(node_index, ())
+  qvalues = tree.qvalues(node_index)
+  visit_counts = tree.children_visits[node_index]
+  node_value = tree.node_values[node_index]
+  chex.assert_rank([qvalues, visit_counts, node_index], [1, 1, 0])
+  safe_qvalues = jnp.where(visit_counts > 0, qvalues, node_value)
+  min_value = jnp.minimum(node_value, jnp.min(safe_qvalues, axis=-1))
+  max_value = jnp.maximum(node_value, jnp.max(safe_qvalues, axis=-1))
+  denom = jnp.maximum(max_value - min_value, epsilon)
+
+  completed_by_min = jnp.where(visit_counts > 0, qvalues, min_value)
+  q_norm = (completed_by_min - min_value) / denom
+  chex.assert_equal_shape([q_norm, qvalues])
+
+  # Variances (raw -> normalized)
+  # Expect an array of per-child empirical variances on the SAME raw scale as qvalues.
+  variances = tree.variances(node_index)
+  chex.assert_equal_shape([variances, qvalues])
+  variances = jnp.where(visit_counts > 0, variances, 0.0)
+  var_norm = variances / (denom ** 2)
+
+  return q_norm, var_norm
+
+
 def qtransform_completed_by_mix_value(
     tree: tree_lib.Tree,
     node_index: chex.Numeric,
