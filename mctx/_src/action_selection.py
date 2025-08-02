@@ -145,7 +145,7 @@ def muzero_uct_tuned_action_selection(
     *,
     pb_c_init: float = 1.25,
     pb_c_base: float = 19652.0,
-    qtransform: base.QTransform = qtransforms.qtransform_by_parent_and_siblings,
+    qtransform: base.QTransform = qtransforms.q_var_transform_by_parent_and_siblings,
 ) -> chex.Array:
   """Returns the action selected for a node index.
 
@@ -166,7 +166,7 @@ def muzero_uct_tuned_action_selection(
   visit_counts = tree.children_visits[node_index]
   node_visit = tree.node_visits[node_index]
   # value, variance
-  value_score, variance_score = q_var_transform_by_parent_and_siblings(tree, node_index)
+  value_score, variance_score = qtransform(tree, node_index)
   # uct
   uct_tuned_score = jnp.sqrt(jnp.log(node_visit) / (visit_counts + 1) *
                              jnp.minimum(

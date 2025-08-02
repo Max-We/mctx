@@ -131,7 +131,7 @@ def muzero_uct_tuned_policy(
     max_depth: Optional[int] = None,
     loop_fn: base.LoopFn = jax.lax.fori_loop,
     *,
-    qtransform: base.QTransform = qtransforms.qtransform_by_parent_and_siblings,
+    qtransform: base.QTransform = qtransforms.q_var_transform_by_parent_and_siblings,
     dirichlet_fraction: chex.Numeric = 0.25,
     dirichlet_alpha: chex.Numeric = 0.3,
     pb_c_init: chex.Numeric = 1.25,
@@ -185,7 +185,7 @@ def muzero_uct_tuned_policy(
 
   # Running the search.
   interior_action_selection_fn = functools.partial(
-      action_selection.muzero_uct_tuned_action_selection(),
+      action_selection.muzero_uct_tuned_action_selection,
       pb_c_base=pb_c_base,
       pb_c_init=pb_c_init,
       qtransform=qtransform)
