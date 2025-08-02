@@ -163,4 +163,4 @@ def _unbatched_qvalues(tree: Tree, index: int) -> int:
 
 def _unbatched_variances(tree: Tree, index: int) -> int:
   chex.assert_rank(tree.children_discounts, 2)
-  return jnp.square(tree.children_discounts) * tree.children_variances[index]
+  return jnp.square(tree.children_discounts[index]) * tree.children_variances[index]
