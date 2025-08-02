@@ -107,7 +107,7 @@ class Tree(Generic[T]):
     if jnp.asarray(indices).shape:
       return jax.vmap(_unbatched_variances)(self, indices)
     else:
-      return _unbatched_variances
+      return _unbatched_variances(self, indices)
     # pytype: enable=wrong-arg-types
 
   def summary(self) -> SearchSummary:
