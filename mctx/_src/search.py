@@ -259,8 +259,9 @@ def backward(
 
   def welfords_parallel_update(val_parent, var_parent, n_parent, val_leaf, var_leaf, n_leaf=1):
       # convert n to float for numerical stability
-      n_parent = jnp.asarray(n_parent, dtype=jnp.float32)
-      n_leaf = jnp.asarray(n_leaf, dtype=jnp.float32)
+      dtype = val_parent.dtype
+      n_parent = jnp.asarray(n_parent, dtype=dtype)
+      n_leaf = jnp.asarray(n_leaf, dtype=dtype)
 
       # Welford algorithm for calculating mean & variance (for the parent)
       n_new = n_leaf + n_parent
