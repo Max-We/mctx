@@ -30,7 +30,6 @@ from mctx._src.base import RootActionSelectionFn
 from mctx._src.base import RootFnOutput
 from mctx._src.policies import gumbel_muzero_policy
 from mctx._src.policies import muzero_policy
-from mctx._src.policies import muzero_value_policy
 from mctx._src.policies import stochastic_muzero_policy
 from mctx._src.qtransforms import qtransform_by_min_max
 from mctx._src.qtransforms import qtransform_by_parent_and_siblings
@@ -58,7 +57,6 @@ __all__ = (
     "gumbel_muzero_root_action_selection",
     "muzero_action_selection",
     "muzero_policy",
-    "muzero_value_policy",
     "qtransform_by_min_max",
     "qtransform_by_parent_and_siblings",
     "qtransform_completed_by_mix_value",
