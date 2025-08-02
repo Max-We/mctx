@@ -91,7 +91,7 @@ def muzero_policy(
 
   # Running the search.
   interior_action_selection_fn = functools.partial(
-      action_selection.muzero_action_selection,
+      action_selection.muzero_uct_action_selection,
       pb_c_base=pb_c_base,
       pb_c_init=pb_c_init,
       qtransform=qtransform)

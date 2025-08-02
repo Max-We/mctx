@@ -89,6 +89,53 @@ def muzero_action_selection(
   # Masking the invalid actions at the root.
   return masked_argmax(to_argmax, tree.root_invalid_actions * (depth == 0))
 
+def muzero_uct_action_selection(
+    rng_key: chex.PRNGKey,
+    tree: tree_lib.Tree,
+    node_index: chex.Numeric,
+    depth: chex.Numeric,
+    *,
+    pb_c_init: float = 1.25,
+    pb_c_base: float = 19652.0,
+    qtransform: base.QTransform = qtransforms.qtransform_by_parent_and_siblings,
+) -> chex.Array:
+  """Returns the action selected for a node index.
+
+  See Appendix B in https://arxiv.org/pdf/1911.08265.pdf for more details.
+
+  Args:
+    rng_key: random number generator state.
+    tree: _unbatched_ MCTS tree state.
+    node_index: scalar index of the node from which to select an action.
+    depth: the scalar depth of the current node. The root has depth zero.
+    pb_c_init: constant c_1 in the PUCT formula.
+    pb_c_base: constant c_2 in the PUCT formula.
+    qtransform: a monotonic transformation to convert the Q-values to [0, 1].
+
+  Returns:
+    action: the action selected from the given node.
+  """
+  visit_counts = tree.children_visits[node_index]
+  node_visit = tree.node_visits[node_index]
+  # uct
+  uct_score = 1.25 * jnp.sqrt(jnp.log(node_visit) / (visit_counts + 1))
+  prior_logits = tree.children_prior_logits[node_index]
+  prior_probs = jax.nn.softmax(prior_logits)
+  # p * uct
+  policy_score = prior_probs * uct_score
+  chex.assert_shape([node_index, node_visit], ())
+  chex.assert_equal_shape([prior_probs, visit_counts, policy_score])
+  # value
+  value_score = qtransform(tree, node_index)
+
+  # Add tiny bit of randomness for tie break
+  node_noise_score = 1e-7 * jax.random.uniform(
+      rng_key, (tree.num_actions,))
+  to_argmax = value_score + policy_score + node_noise_score
+
+  # Masking the invalid actions at the root.
+  return masked_argmax(to_argmax, tree.root_invalid_actions * (depth == 0))
+
 @chex.dataclass(frozen=True)
 class GumbelMuZeroExtraData:
   """Extra data for Gumbel MuZero search."""
