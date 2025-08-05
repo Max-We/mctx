@@ -98,6 +98,8 @@ class PolicyOutput(Generic[T]):
   """
   action: chex.Array
   action_weights: chex.Array
+  value: chex.Array
+  variance: chex.Array
   search_tree: tree.Tree[T]
 
 

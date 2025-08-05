@@ -119,6 +119,8 @@ def muzero_policy(
   return base.PolicyOutput(
       action=action,
       action_weights=action_weights,
+      value=summary.value,
+      variance=summary.variance,
       search_tree=search_tree)
 
 def muzero_uct_tuned_policy(
@@ -213,6 +215,8 @@ def muzero_uct_tuned_policy(
   return base.PolicyOutput(
       action=action,
       action_weights=action_weights,
+      value=summary.value,
+      variance=summary.variance,
       search_tree=search_tree)
 
 def muzero_uct_bayes_policy(
@@ -307,6 +311,8 @@ def muzero_uct_bayes_policy(
   return base.PolicyOutput(
       action=action,
       action_weights=action_weights,
+      value=summary.value,
+      variance=summary.variance,
       search_tree=search_tree)
 
 def gumbel_muzero_policy(
@@ -415,6 +421,8 @@ def gumbel_muzero_policy(
   return base.PolicyOutput(
       action=action,
       action_weights=action_weights,
+      value=summary.value,
+      variance=summary.variance,
       search_tree=search_tree)
 
 
@@ -555,7 +563,7 @@ def stochastic_muzero_policy(
       _get_logits_from_probs(action_weights), temperature)
   action = jax.random.categorical(rng_key, action_logits)
   return base.PolicyOutput(
-      action=action, action_weights=action_weights, search_tree=search_tree)
+      action=action, action_weights=action_weights, search_tree=search_tree, value=summary.value, variance=summary.variance)
 
 
 def _mask_invalid_actions(logits, invalid_actions):
