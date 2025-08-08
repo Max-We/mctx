@@ -274,7 +274,7 @@ def muzero_uct_v_action_selection(
   z, c = 1.0, 1.0
   b = 1.0
   uct_bayes_score = jnp.sqrt(
-    (2 * z * value_score * jnp.log(node_visit)) / (visit_counts + 1)
+    (2 * z * variance_score * jnp.log(node_visit)) / (visit_counts + 1)
   ) + c * (3 * b * z * jnp.log(node_visit)) / (visit_counts + 1)
   prior_logits = tree.children_prior_logits[node_index]
   prior_probs = jax.nn.softmax(prior_logits)
