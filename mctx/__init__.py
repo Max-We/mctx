@@ -29,6 +29,7 @@ from mctx._src.base import RecurrentState
 from mctx._src.base import RootActionSelectionFn
 from mctx._src.base import RootFnOutput
 from mctx._src.policies import gumbel_muzero_policy
+from mctx._src.policies import muzero_value_greedy_policy
 from mctx._src.policies import muzero_policy
 from mctx._src.policies import muzero_uct_tuned_policy
 from mctx._src.policies import muzero_uct_bayes_policy
@@ -62,6 +63,7 @@ __all__ = (
     "muzero_policy",
     "muzero_uct_tuned_policy",
     "muzero_uct_bayes_policy",
+    "muzero_value_greedy_policy"
     "qtransform_by_min_max",
     "qtransform_by_parent_and_siblings",
     "qtransform_completed_by_mix_value",
