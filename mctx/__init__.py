@@ -35,6 +35,10 @@ from mctx._src.policies import muzero_uct_policy
 from mctx._src.policies import muzero_uct_tuned_policy
 from mctx._src.policies import muzero_uct_bayes_policy
 from mctx._src.policies import muzero_uct_v_policy
+from mctx._src.policies import muzero_uct_new_policy
+from mctx._src.policies import muzero_uct_v_new_policy
+from mctx._src.policies import muzero_uct_bayes_new_policy
+from mctx._src.policies import muzero_uct_tuned_new_policy
 from mctx._src.policies import stochastic_muzero_policy
 from mctx._src.qtransforms import qtransform_by_min_max
 from mctx._src.qtransforms import qtransform_by_parent_and_siblings
@@ -68,6 +72,10 @@ __all__ = (
     "muzero_uct_bayes_policy",
     "muzero_value_greedy_policy",
     "muzero_uct_v_policy",
+    "muzero_uct_new_policy",
+    "muzero_uct_v_new_policy",
+    "muzero_uct_bayes_new_policy",
+    "muzero_uct_tuned_new_policy",
     "qtransform_by_min_max",
     "qtransform_by_parent_and_siblings",
     "qtransform_completed_by_mix_value",
