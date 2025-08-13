@@ -364,17 +364,19 @@ def muzero_uct_tuned_new_h_action_selection(
   prior_logits = tree.children_prior_logits[node_index]
   prior_probs = jax.nn.softmax(prior_logits)
   # p * uct
-  policy_score =  (prior_probs * jnp.sqrt(node_visit) / (visit_counts + 1) *
-                   jnp.sqrt(jnp.minimum(
-                     0.25,
-                     variance_score + prior_probs * jnp.sqrt(2 * node_visit) / (visit_counts + 1)
-                   )))
+  policy_score = ((prior_probs * jnp.sqrt(node_visit) / (visit_counts + 1)) *
+                  jnp.sqrt(jnp.minimum(
+                            0.25,
+                            variance_score + jnp.sqrt(
+                              (prior_probs * 2 * jnp.log(node_visit)) / (visit_counts + 1)
+                            )
+                  )))
   chex.assert_shape([node_index, node_visit], ())
   chex.assert_equal_shape([prior_probs, visit_counts, policy_score])
 
   # Add tiny bit of randomness for tie break
   node_noise_score = 1e-7 * jax.random.uniform(
-      rng_key, (tree.num_actions,))
+    rng_key, (tree.num_actions,))
   to_argmax = value_score + policy_score + node_noise_score
 
   # Masking the invalid actions at the root.
@@ -616,8 +618,8 @@ def muzero_uct_v_new_h_action_selection(
   # new
   z, c = 1.0, 1.0
   b = 1.0
-  policy_score = prior_probs * jnp.sqrt(( 2 * z * variance_score * node_visit)) / (visit_counts + 1)
-  + c * (prior_probs * 3 * b * z * node_visit) / (visit_counts + 1)
+  policy_score = (prior_probs * jnp.sqrt(2 * z * variance_score * node_visit) / (visit_counts + 1)
+                  + c * (prior_probs * 3 * b * z * jnp.log(node_visit)) / (visit_counts + 1))
   chex.assert_shape([node_index, node_visit], ())
   chex.assert_equal_shape([prior_probs, visit_counts, policy_score])
 
