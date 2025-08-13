@@ -567,7 +567,7 @@ def muzero_uct_v_new_action_selection(
   prior_probs = jax.nn.softmax(prior_logits)
   # new
   z, c = 1.0, 1.0
-  b = 1.0
+  b = 0.1
   policy_score = jnp.sqrt(
     (prior_probs * 2 * z * variance_score * jnp.log(node_visit)) / (visit_counts + 1)
   ) + c * (prior_probs * 3 * b * z * jnp.log(node_visit)) / (visit_counts + 1)
@@ -619,7 +619,7 @@ def muzero_uct_v_new_h_action_selection(
   z, c = 1.0, 1.0
   b = 1.0
   policy_score = (prior_probs * jnp.sqrt(2 * z * variance_score * node_visit) / (visit_counts + 1)
-                  + c * (prior_probs * 3 * b * z * jnp.log(node_visit)) / (visit_counts + 1))
+                  + c * ((prior_probs**2) * 3 * b * z * jnp.sqrt(node_visit)) / ((visit_counts + 1)**2))
   chex.assert_shape([node_index, node_visit], ())
   chex.assert_equal_shape([prior_probs, visit_counts, policy_score])
 
